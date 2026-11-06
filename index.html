@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Combination Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🔐</span>
+      <h1>Combination Tracker</h1>
+      <span class="mode-pill" id="modePill">Smart order</span>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="exportBtn" title="Download progress as JSON">Export</button>
+      <label class="btn ghost" title="Load progress from JSON">
+        Import<input type="file" id="importInput" accept="application/json" hidden />
+      </label>
+      <button class="btn danger-ghost" id="resetBtn">Reset</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Current combination -->
+    <section class="card current-card">
+      <div class="card-head">
+        <h2>Current combination</h2>
+        <div class="head-tags">
+          <span class="cat" id="catTag" hidden></span>
+          <span class="badge" id="statusBadge">Not tried</span>
+        </div>
+      </div>
+
+      <div class="dials" id="dials"></div>
+
+      <div class="primary-actions">
+        <button class="btn" id="prevBtn" title="Previous number (←)">◀</button>
+        <button class="btn primary big" id="tryBtn" title="Mark tried and go to the next candidate (Enter / Space)">
+          ✓ Tried – Next
+        </button>
+        <button class="btn" id="nextBtn" title="Next number (→)">▶</button>
+      </div>
+
+      <div class="secondary-actions">
+        <button class="btn small" id="toggleBtn" title="Toggle tried status (T)">Toggle tried</button>
+        <button class="btn small" id="undoBtn" title="Undo last action (Ctrl+Z)">↶ Undo</button>
+        <button class="btn small" id="nextUntriedBtn" title="Jump to next candidate (N)">Next candidate</button>
+        <button class="btn small success" id="foundBtn" title="This combination opened it!">🎉 It worked!</button>
+      </div>
+
+      <div class="queue-wrap">
+        <span class="queue-title">Up next</span>
+        <div class="queue" id="queue"></div>
+      </div>
+
+      <form class="jump" id="jumpForm">
+        <input id="jumpInput" inputmode="numeric" maxlength="4" pattern="\d{1,4}" placeholder="Jump to…" />
+        <button class="btn small" type="submit">Go</button>
+      </form>
+
+      <p class="hint">
+        <kbd>Enter</kbd>/<kbd>Space</kbd> tried &amp; next · <kbd>←</kbd><kbd>→</kbd> step ·
+        <kbd>T</kbd> toggle · <kbd>N</kbd> next candidate · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo ·
+        scroll a dial to change it
+      </p>
+    </section>
+
+    <!-- Stats -->
+    <section class="card stats-card">
+      <h2>Progress</h2>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120" class="ring">
+          <circle cx="60" cy="60" r="52" class="ring-bg" />
+          <circle cx="60" cy="60" r="52" class="ring-fg" id="ringFg" />
+        </svg>
+        <div class="ring-label">
+          <span id="pctText">0%</span>
+          <small id="ringSub">of candidates</small>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat hl"><span class="stat-num" id="candText">10,000</span><span class="stat-lbl">Candidates left</span></div>
+        <div class="stat"><span class="stat-num" id="triedText">0</span><span class="stat-lbl">Tried</span></div>
+        <div class="stat"><span class="stat-num" id="sessionText">0</span><span class="stat-lbl">This session</span></div>
+        <div class="stat"><span class="stat-num" id="rateText">–</span><span class="stat-lbl">Per minute</span></div>
+        <div class="stat wide"><span class="stat-num" id="etaText">–</span><span class="stat-lbl">Worst-case time left at this pace</span></div>
+      </div>
+      <div class="found" id="foundBox" hidden>
+        <span>Found:</span> <strong id="foundText">----</strong>
+      </div>
+    </section>
+
+    <!-- Clues & strategy -->
+    <section class="card clues-card">
+      <div class="card-head">
+        <h2>Clues &amp; strategy</h2>
+        <button class="btn small ghost" id="clearCluesBtn">Clear clues</button>
+      </div>
+
+      <div class="space-bar">
+        <div class="space-text">
+          Search space <b>10,000</b> → <b id="spaceText">10,000</b> combinations
+          <span class="saving" id="savingText"></span>
+        </div>
+        <div class="space-track"><div class="space-fill" id="spaceFill"></div></div>
+      </div>
+
+      <div class="clues-grid">
+        <div class="clue-block">
+          <h3>Per-dial digits</h3>
+          <p class="sub">Click a digit: <span class="chip-demo known">known</span> → <span class="chip-demo out">ruled out</span> → neutral.</p>
+          <div class="digit-grid" id="digitGrid"></div>
+        </div>
+
+        <div class="clue-block">
+          <h3>Order of attempts</h3>
+          <div class="segmented" id="modeSeg">
+            <button data-mode="smart" class="active">Smart</button>
+            <button data-mode="sequential">Sequential</button>
+          </div>
+          <p class="sub" id="modeDesc"></p>
+
+          <label class="field">
+            <span>Digits it definitely contains (any position)</span>
+            <input id="containsInput" inputmode="numeric" maxlength="4" placeholder="e.g. 27" />
+          </label>
+
+          <label class="field">
+            <span>Meaningful numbers to try first <em>(stays in this browser)</em></span>
+            <input id="personalInput" placeholder="e.g. 1995, 15081995, 42" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Map -->
+    <section class="card map-card">
+      <div class="card-head">
+        <h2>Map of all 10,000</h2>
+        <div class="legend">
+          <span><i class="sw untried"></i>To try</span>
+          <span><i class="sw tried"></i>Tried</span>
+          <span><i class="sw out"></i>Ruled out</span>
+          <span><i class="sw cur"></i>Current</span>
+        </div>
+      </div>
+      <p class="map-sub">Rows = first two digits, columns = last two. Click a cell to jump.</p>
+      <div class="map-wrap">
+        <canvas id="map"></canvas>
+        <div class="map-tip" id="mapTip" hidden></div>
+      </div>
+      <div class="blocks" id="blocks"></div>
+    </section>
+
+    <!-- History -->
+    <section class="card history-card">
+      <div class="card-head">
+        <h2>Recent attempts</h2>
+        <span class="muted" id="historyCount"></span>
+      </div>
+      <ol class="history" id="history"></ol>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
